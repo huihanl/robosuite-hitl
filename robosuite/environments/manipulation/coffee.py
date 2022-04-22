@@ -455,27 +455,28 @@ class Coffee(SingleArmEnv):
             pod_check = False
 
         success["task"] = lid_check and pod_check
+        return success["task"]
 
-        # partial task metrics below
+        # # partial task metrics below
 
-        # for pod insertion check, just check that bottom of pod is within some tolerance of bottom of container
-        pod_insertion_z_tolerance = 0.02
-        pod_z_check = (pod_pos[2] - self.pod_size[2] > z_lim_low) and (pod_pos[2] - self.pod_size[2] < z_lim_low + pod_insertion_z_tolerance)
-        success["insertion"] = pod_horz_check and pod_z_check
+        # # for pod insertion check, just check that bottom of pod is within some tolerance of bottom of container
+        # pod_insertion_z_tolerance = 0.02
+        # pod_z_check = (pod_pos[2] - self.pod_size[2] > z_lim_low) and (pod_pos[2] - self.pod_size[2] < z_lim_low + pod_insertion_z_tolerance)
+        # success["insertion"] = pod_horz_check and pod_z_check
 
-        # pod grasp check
-        success["grasp"] = self._check_pod_is_grasped()
+        # # pod grasp check
+        # success["grasp"] = self._check_pod_is_grasped()
 
-        # check is True if the pod is on / near the rim of the pod holder
-        rim_horz_tolerance = 0.03
-        rim_horz_check = (np.linalg.norm(pod_pos[:2] - pod_holder_pos[:2]) < rim_horz_tolerance)
+        # # check is True if the pod is on / near the rim of the pod holder
+        # rim_horz_tolerance = 0.03
+        # rim_horz_check = (np.linalg.norm(pod_pos[:2] - pod_holder_pos[:2]) < rim_horz_tolerance)
 
-        rim_vert_tolerance = 0.026
-        rim_vert_length = pod_pos[2] - pod_holder_pos[2] - self.pod_holder_size[2]
-        rim_vert_check = (rim_vert_length < rim_vert_tolerance) and (rim_vert_length > 0.)
-        success["rim"] = rim_horz_check and rim_vert_check
+        # rim_vert_tolerance = 0.026
+        # rim_vert_length = pod_pos[2] - pod_holder_pos[2] - self.pod_holder_size[2]
+        # rim_vert_check = (rim_vert_length < rim_vert_tolerance) and (rim_vert_length > 0.)
+        # success["rim"] = rim_horz_check and rim_vert_check
 
-        return success
+        # return success
 
     def _check_pod_is_grasped(self):
         """
