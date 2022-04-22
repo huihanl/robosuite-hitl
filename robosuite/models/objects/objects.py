@@ -1,6 +1,7 @@
 import copy
 from copy import deepcopy
 import xml.etree.ElementTree as ET
+import numpy as np
 
 import robosuite.utils.macros as macros
 from robosuite.models.base import MujocoXML, MujocoModel
@@ -446,6 +447,12 @@ class MujocoXMLObject(MujocoObject, MujocoXML):
         )
         return string_to_array(horizontal_radius_site.get("pos"))[0]
 
+    def get_bounding_box_size(self):
+        horizontal_radius_site = self.worldbody.find(
+            "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
+        )
+        return string_to_array(horizontal_radius_site.get("pos")) - self.bottom_offset
+
 
 class MujocoGeneratedObject(MujocoObject):
     """
@@ -553,3 +560,6 @@ class MujocoGeneratedObject(MujocoObject):
 
     def horizontal_radius(self):
         raise NotImplementedError
+
+    def get_bounding_box_size(self):
+        return np.array([self.horizontal_radius, self.horizontal_radius, 0.]) - self.bottom_offset

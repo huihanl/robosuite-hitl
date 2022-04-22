@@ -246,3 +246,44 @@ class DoorObject(MujocoXMLObject):
             "handle": self.naming_prefix + "handle"
         })
         return dic
+
+
+class CoffeeMachinePodObject(MujocoXMLObject):
+    """
+    Coffee pod object (used in Coffee task).
+    """
+    def __init__(self, name):
+        super().__init__(xml_path_completion("objects/coffee_pod.xml"),
+                         # name=name, joints=[dict(type="free", damping="0.0005")],
+                         name=name, joints=[dict(type="free")],
+                         obj_type="all", duplicate_collision_geoms=True)
+
+
+class CoffeeMachineBodyObject(MujocoXMLObject):
+    """
+    Coffee machine body piece (used in Coffee task). Note that the piece is rigid (no joint is added).
+    """
+    def __init__(self, name):
+        super().__init__(xml_path_completion("objects/coffee_body.xml"),
+                         name=name, joints=None,
+                         obj_type="all", duplicate_collision_geoms=True)
+
+
+class CoffeeMachineLidObject(MujocoXMLObject):
+    """
+    Coffee machine lid piece (used in Coffee task).
+    """
+    def __init__(self, name):
+        super().__init__(xml_path_completion("objects/coffee_lid.xml"),
+                         name=name, joints=None,
+                         obj_type="all", duplicate_collision_geoms=True)
+
+
+class CoffeeMachineBaseObject(MujocoXMLObject):
+    """
+    Coffee machine base piece (used in Coffee task). Note that the piece is rigid (no joint is added).
+    """
+    def __init__(self, name):
+        super().__init__(xml_path_completion("objects/coffee_base.xml"),
+                         name=name, joints=None,
+                         obj_type="all", duplicate_collision_geoms=True)
