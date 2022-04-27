@@ -182,7 +182,7 @@ class Coffee(SingleArmEnv):
             camera_depths=camera_depths,
         )
 
-    def reward(self, action):
+    def reward(self, action=None):
         """
         Reward function for the task.
 
@@ -240,6 +240,16 @@ class Coffee(SingleArmEnv):
         objects = [self.coffee_pod, self.coffee_machine]
 
         # Create placement initializer
+        self._get_placement_initializer()
+
+        # task includes arena, robot, and objects of interest
+        self.model = ManipulationTask(
+            mujoco_arena=mujoco_arena,
+            mujoco_robots=[robot.robot_model for robot in self.robots],
+            mujoco_objects=objects,
+        )
+
+    def _get_placement_initializer(self):
         self.placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
         self.placement_initializer.append_sampler(
             sampler=UniformRandomSampler(
@@ -268,13 +278,6 @@ class Coffee(SingleArmEnv):
                 reference_pos=self.table_offset,
                 z_offset=0.,
             )
-        )
-
-        # task includes arena, robot, and objects of interest
-        self.model = ManipulationTask(
-            mujoco_arena=mujoco_arena,
-            mujoco_robots=[robot.robot_model for robot in self.robots],
-            mujoco_objects=objects,
         )
 
     def _setup_references(self):
@@ -428,7 +431,11 @@ class Coffee(SingleArmEnv):
         """
         Check if task is complete.
         """
-        success = {}
+        metrics = self._get_partial_task_metrics()
+        return metrics["task"]
+
+    def _get_partial_task_metrics(self):
+        metrics = dict()
 
         # lid should be closed (angle should be less than 5 degrees)
         hinge_tolerance = 15. * np.pi / 180. 
@@ -454,29 +461,26 @@ class Coffee(SingleArmEnv):
         if (pod_pos[2] - self.pod_size[2] < z_lim_low) or (pod_pos[2] + self.pod_size[2] > z_lim_high):
             pod_check = False
 
-        success["task"] = lid_check and pod_check
-        return success["task"]
+        metrics["task"] = lid_check and pod_check
 
-        # # partial task metrics below
+        # for pod insertion check, just check that bottom of pod is within some tolerance of bottom of container
+        pod_insertion_z_tolerance = 0.02
+        pod_z_check = (pod_pos[2] - self.pod_size[2] > z_lim_low) and (pod_pos[2] - self.pod_size[2] < z_lim_low + pod_insertion_z_tolerance)
+        metrics["insertion"] = pod_horz_check and pod_z_check
 
-        # # for pod insertion check, just check that bottom of pod is within some tolerance of bottom of container
-        # pod_insertion_z_tolerance = 0.02
-        # pod_z_check = (pod_pos[2] - self.pod_size[2] > z_lim_low) and (pod_pos[2] - self.pod_size[2] < z_lim_low + pod_insertion_z_tolerance)
-        # success["insertion"] = pod_horz_check and pod_z_check
+        # pod grasp check
+        metrics["grasp"] = self._check_pod_is_grasped()
 
-        # # pod grasp check
-        # success["grasp"] = self._check_pod_is_grasped()
+        # check is True if the pod is on / near the rim of the pod holder
+        rim_horz_tolerance = 0.03
+        rim_horz_check = (np.linalg.norm(pod_pos[:2] - pod_holder_pos[:2]) < rim_horz_tolerance)
 
-        # # check is True if the pod is on / near the rim of the pod holder
-        # rim_horz_tolerance = 0.03
-        # rim_horz_check = (np.linalg.norm(pod_pos[:2] - pod_holder_pos[:2]) < rim_horz_tolerance)
+        rim_vert_tolerance = 0.026
+        rim_vert_length = pod_pos[2] - pod_holder_pos[2] - self.pod_holder_size[2]
+        rim_vert_check = (rim_vert_length < rim_vert_tolerance) and (rim_vert_length > 0.)
+        metrics["rim"] = rim_horz_check and rim_vert_check
 
-        # rim_vert_tolerance = 0.026
-        # rim_vert_length = pod_pos[2] - pod_holder_pos[2] - self.pod_holder_size[2]
-        # rim_vert_check = (rim_vert_length < rim_vert_tolerance) and (rim_vert_length > 0.)
-        # success["rim"] = rim_horz_check and rim_vert_check
-
-        # return success
+        return metrics
 
     def _check_pod_is_grasped(self):
         """

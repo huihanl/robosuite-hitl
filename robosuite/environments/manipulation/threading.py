@@ -182,7 +182,7 @@ class Threading(SingleArmEnv):
             camera_depths=camera_depths,
         )
 
-    def reward(self, action):
+    def reward(self, action=None):
         """
         Reward function for the task.
 
@@ -240,6 +240,16 @@ class Threading(SingleArmEnv):
         objects = [self.needle, self.tripod]
 
         # Create placement initializer
+        self._get_placement_initializer()
+
+        # task includes arena, robot, and objects of interest
+        self.model = ManipulationTask(
+            mujoco_arena=mujoco_arena,
+            mujoco_robots=[robot.robot_model for robot in self.robots],
+            mujoco_objects=objects,
+        )
+
+    def _get_placement_initializer(self):
         self.placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
         self.placement_initializer.append_sampler(
             sampler=UniformRandomSampler(
@@ -268,13 +278,6 @@ class Threading(SingleArmEnv):
                 reference_pos=self.table_offset,
                 z_offset=0.001,
             )
-        )
-
-        # task includes arena, robot, and objects of interest
-        self.model = ManipulationTask(
-            mujoco_arena=mujoco_arena,
-            mujoco_robots=[robot.robot_model for robot in self.robots],
-            mujoco_objects=objects,
         )
 
     def _setup_references(self):
