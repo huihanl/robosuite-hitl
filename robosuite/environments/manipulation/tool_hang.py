@@ -196,7 +196,7 @@ class ToolHang(SingleArmEnv):
         reward = 0.
 
         # sparse completion reward
-        if self._check_success():
+        if self._check_success()["task"]:
             reward = 1.0
 
         # Scale reward if requested
