@@ -47,6 +47,13 @@
     <camera mode="fixed" name="birdview" pos="-0.2 0 3.0" quat="0.7071 0 0 0.7071"/>
     <!-- agent view -->
     <camera mode="fixed" name="agentview" pos="0.5 0 1.35" quat="0.653 0.271 0.271 0.653"/>
+
+    <!-- ADDED: agent view with full perspective of tabletop -->
+    <camera mode="fixed" name="agentview_full" pos="0.753078462147161 2.062036796036723e-08 1.5194726087166726" quat="0.6432409286499023 0.293668270111084 0.2936684489250183 0.6432408690452576" />
+
+    <!-- ADDED: agent view with full perspective of tabletop -->
+<!--     <camera mode="fixed" name="agentview_full_1" pos="0.6238624165332182 4.88547438179417e-08 1.5272510995403579" quat="0.6642999649047852 0.24229437112808228 0.24229472875595093 0.6642986536026001" /> -->
+
     <!-- side view -->
     <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
   </worldbody>
