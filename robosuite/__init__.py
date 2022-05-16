@@ -9,6 +9,7 @@ from robosuite.environments.manipulation.door import Door
 from robosuite.environments.manipulation.wipe import Wipe
 from robosuite.environments.manipulation.threading import Threading
 from robosuite.environments.manipulation.coffee import Coffee
+from robosuite.environments.manipulation.three_piece_assembly import ThreePieceAssembly
 from robosuite.environments.manipulation.tool_hang import ToolHang
 from robosuite.environments.manipulation.two_arm_lift import TwoArmLift
 from robosuite.environments.manipulation.two_arm_peg_in_hole import TwoArmPegInHole

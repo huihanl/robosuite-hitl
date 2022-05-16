@@ -1,4 +1,5 @@
 from .bin import Bin
+from .box_pattern_object import BoxPatternObject
 from .hammer import HammerObject
 from .lid import Lid
 from .pot_with_handles import PotWithHandlesObject
