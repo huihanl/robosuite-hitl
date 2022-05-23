@@ -12,7 +12,7 @@ from robosuite.models.objects import BoxPatternObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.placement_samplers import SequentialCompositeSampler, UniformRandomSampler
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.mjcf_utils import CustomMaterial
+from robosuite.utils.mjcf_utils import CustomMaterial, find_elements, string_to_array
 
 
 class ThreePieceAssembly(SingleArmEnv):
@@ -290,6 +290,22 @@ class ThreePieceAssembly(SingleArmEnv):
 
         # Arena always gets set to zero origin
         mujoco_arena.set_origin([0, 0, 0])
+
+        # Set default agentview camera to be "agentview_full" (and send old agentview camera to agentview_full)
+        old_agentview_camera = find_elements(root=mujoco_arena.worldbody, tags="camera", attribs={"name": "agentview"}, return_first=True)
+        old_agentview_camera_pose = (old_agentview_camera.get("pos"), old_agentview_camera.get("quat"))
+        old_agentview_full_camera = find_elements(root=mujoco_arena.worldbody, tags="camera", attribs={"name": "agentview_full"}, return_first=True)
+        old_agentview_full_camera_pose = (old_agentview_full_camera.get("pos"), old_agentview_full_camera.get("quat"))
+        mujoco_arena.set_camera(
+            camera_name="agentview",
+            pos=string_to_array(old_agentview_full_camera_pose[0]),
+            quat=string_to_array(old_agentview_full_camera_pose[1]),
+        )
+        mujoco_arena.set_camera(
+            camera_name="agentview_full",
+            pos=string_to_array(old_agentview_camera_pose[0]),
+            quat=string_to_array(old_agentview_camera_pose[1]),
+        )
 
         # initialize objects of interest
         self.piece_1_pattern, self.piece_2_pattern, self.base_pattern = self._get_piece_patterns()
