@@ -184,6 +184,16 @@ class ThreePieceAssembly(SingleArmEnv):
             camera_depths=camera_depths,
         )
 
+    def _get_piece_densities(self):
+        """
+        Subclasses can override this method to change the weight of the pieces.
+        """
+        return dict(
+            base=100.,
+            piece_1=100.,
+            piece_2=100.,
+        )
+
     def reward(self, action=None):
         """
         Reward function for the task.
@@ -346,13 +356,15 @@ class ThreePieceAssembly(SingleArmEnv):
             mat_attrib=mat_attrib,
         )
 
+        piece_densities = self._get_piece_densities()
+
         self.piece_1 = BoxPatternObject(
             name="piece_1",
             unit_size=[self.piece_1_size, self.piece_1_size, self.piece_1_size],
             pattern=self.piece_1_pattern,
             rgba=None,
             material=mat,
-            density=100.,
+            density=piece_densities["piece_1"],
             friction=None,
         )
         self.piece_2 = BoxPatternObject(
@@ -361,7 +373,7 @@ class ThreePieceAssembly(SingleArmEnv):
             pattern=self.piece_2_pattern,
             rgba=None,
             material=mat,
-            density=100.,
+            density=piece_densities["piece_2"],
             friction=None,
         )
         self.base = BoxPatternObject(
@@ -370,7 +382,7 @@ class ThreePieceAssembly(SingleArmEnv):
             pattern=self.base_pattern,
             rgba=None,
             material=mat,
-            density=100.,
+            density=piece_densities["base"],
             friction=None,
         )
 
