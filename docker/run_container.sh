@@ -1,0 +1,2 @@
+docker rm -f robosuite
+xhost +   &&    docker run   --env NVIDIA_DISABLE_REQUIRE=1 -it --name robosuite --network=host  -m  16000m --cap-add=SYS_PTRACE --security-opt seccomp=unconfined  -v /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763:/mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763 -v /home:/home -v /tmp:/tmp   --ipc=host -e DISPLAY=${DISPLAY} -e GIT_INDEX_FILE robosuite bash

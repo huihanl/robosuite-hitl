@@ -1,0 +1,149 @@
+# docker container for Maglev for projects using robomimic
+#
+# NOTE: we store a conda installation in the image, and will update pip links for each virtual environment
+#       into the scratch space every time we launch a job (can do this with sed or pip install -e .). Note
+#       that if using the "sed" workaround like conda_in_scratch, it assumes that the image already has
+#       existing pip links to the repos in the scratch space, so we would need to make that part of the Dockerfile.
+#
+# Build instructions:
+#
+# * Build locally from scratch with using no cached images
+#       docker build --pull --no-cache --network host --rm --file Dockerfile --tag nvcr.io/nv-maglev/robomimic:test2 .
+#
+# * Build locally with using cached images (for fast building and iteration)
+#       docker build --network host --rm --file Dockerfile --tag nvcr.io/nv-maglev/robomimic:test2 .
+#
+# * Try image out locally:
+#       docker run --gpus all --network host --rm -it nvcr.io/nv-maglev/robomimic:test2
+#
+# use this base docker image for compatibility with iGibson, isaacgym (offscreen rendering)
+# FROM nvcr.io/nvidia/cudagl:10.1-devel-ubuntu18.04
+FROM nvcr.io/nvidia/cudagl:11.3.0-devel-ubuntu20.04
+# env variables for tzdata install
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America
+# # handle key rotation for gpg key issue (see https://github.com/NVIDIA/nvidia-docker/issues/1631#issuecomment-1120826583)
+# RUN rm /etc/apt/sources.list.d/cuda.list
+# RUN rm /etc/apt/sources.list.d/nvidia-ml.list
+# RUN apt-key del 7fa2af80
+# RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+# RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub
+# NOTE: each RUN command creates a new image layer, so minimize the number of run commands if possible
+# installing other nice functionalities and system packages required by e.g. robosuite
+RUN apt-get update \
+  && apt-get install apt curl htop screen tmux sshfs libosmesa6-dev wget nano git cmake \
+                    libgl1-mesa-dev libgl1-mesa-glx libglew-dev libosmesa6-dev \
+                    software-properties-common  net-tools  unzip  vim  virtualenv \
+                    xpra xserver-xorg-dev libglfw3-dev patchelf python3-pip -y
+# install conda into container
+RUN curl -O https://repo.anaconda.com/miniconda/Miniconda3-py38_4.12.0-Linux-x86_64.sh \
+    && bash Miniconda3-py38_4.12.0-Linux-x86_64.sh -p /miniconda -b \
+    && rm Miniconda3-py38_4.12.0-Linux-x86_64.sh
+# install mujoco
+RUN mkdir /root/.mujoco/ \
+    && wget https://github.com/deepmind/mujoco/releases/download/2.1.0/mujoco210-linux-x86_64.tar.gz \
+    && tar -xvf mujoco210-linux-x86_64.tar.gz \
+    && mv mujoco210 /root/.mujoco/ \
+    && rm mujoco210-linux-x86_64.tar.gz
+# where to cd into at the start (it also creates the directory if it doesn't exist)
+# WORKDIR /workspace/
+# copy bashrc and other important scripts into docker image
+# COPY bashrc.sh /root/.bashrc
+# COPY py38.sh /root/py38.sh
+# build conda environments here
+RUN /miniconda/bin/conda config --set ssl_verify no &&\
+    /miniconda/bin/conda update -y conda \
+    && /miniconda/bin/conda create -n py38 python=3.8 \
+    && /miniconda/bin/conda install -n py38 numpy scipy numba h5py psutil tqdm termcolor tensorboard tensorboardX imageio ipython jupyter slack-sdk \
+    && /miniconda/bin/conda install -n py38 -c conda-forge imageio-ffmpeg matplotlib
+
+RUN /miniconda/bin/conda install -n py38 pytorch==1.11.0 torchvision==0.12.0 torchaudio==0.11.0 cudatoolkit=11.3 -c pytorch
+# install mujoco-py (forcing a GPU build) and then force it to compile
+
+RUN /miniconda/bin/conda run -n py38 pip install egl_probe>=1.0.1 &&\
+    echo ". /miniconda/etc/profile.d/conda.sh" >> ~/.bashrc &&\
+    ln -s /miniconda/etc/profile.d/conda.sh /etc/profile.d/conda.sh &&\
+    /bin/bash -c "source ~/.bashrc"
+
+SHELL ["/bin/bash", "--login", "-c"]
+
+ENV PATH $PATH:/miniconda/envs/py38/bin
+
+ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/root/.mujoco/mujoco210/bin"
+RUN cd / && git clone https://github.com/openai/mujoco-py.git
+RUN cd /mujoco-py/mujoco_py \
+    && conda activate py38 &&\
+    sed -i 's/Builder = LinuxCPUExtensionBuilder/Builder = LinuxGPUExtensionBuilder/g' builder.py &&\
+    pip install -e ../ \
+    && cd /root \
+    && python -c "import mujoco_py"
+# additional pip deps for robomimic
+
+
+# ### TODO: copy ssh key here to help with git pull? ###
+# RUN mkdir /root/.ssh
+# COPY ~/.ssh/id_rsa /root/.ssh/id_rsa
+# RUN chmod 600 /root/.ssh/id_rsa # edit permissions so git won't complain
+# ### list of dependencies installed in conda environment py38 ###
+# # these were all installed in scratch space under conda folder, e.g. with our symlink, at /workspace/conda
+# # set up conda installation
+# ln -s $WORKFLOW_SCRATCH/test_disk/conda/anaconda3 /workspace/anaconda3
+# wget [https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh](https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh)
+# bash Miniconda3-latest-Linux-x86_64.sh -b -p ./conda/anaconda3
+# at this point, should add conda init snippet (below) to bashrc
+# # make symlink for conda because conda lives in scratch space
+# ln -s $WORKFLOW_SCRATCH/test_disk/conda /workspace/conda
+# # >>> conda initialize >>>
+# # !! Contents within this block are managed by 'conda init' !!
+# __conda_setup="$('/workspace/conda/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+# if [ $? -eq 0 ]; then
+#     eval "$__conda_setup"
+# else
+#     if [ -f "/workspace/conda/anaconda3/etc/profile.d/conda.sh" ]; then
+#         . "/workspace/conda/anaconda3/etc/profile.d/conda.sh"
+#     else
+#         export PATH="/workspace/conda/anaconda3/bin:$PATH"
+#     fi
+# fi
+# unset __conda_setup
+# # <<< conda initialize <<<
+# # now install a bunch of basic conda deps
+# conda install numpy scipy numba
+# conda install h5py psutil tqdm termcolor tensorboard tensorboardX imageio
+# conda install -c conda-forge imageio-ffmpeg
+# conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+# conda install -c conda-forge matplotlib
+# conda install -c anaconda ipython jupyter
+# conda install -c anaconda slack-sdk
+# # after installing pytorch, check torch.cuda.is_available() and torch.backends.cudnn.version() and torch.backends.cudnn.enabled
+# # mujoco-py
+# git clone https://github.com/openai/mujoco-py.git
+# cd mujoco-py
+# # NOTE: had to edit builder.py to force a GPU build!!!
+# pip install -e .
+# cd ~
+# # force compilation of mujoco-py
+# python -c "import mujoco_py"
+# # robosuite-mg
+# cd /workspace/conda
+# git clone git@github.com:RoboTurk-Platform/robosuite.git robosuite-mg
+# cd robosuite-mg
+# git checkout coffee
+# # NOTE: comment out deps in setup.py here
+# pip install -e .
+# # robomimic-mg
+# cd /workspace/conda
+# git clone ssh://git@gitlab-master.nvidia.com:12051/amandlekar/robomimic.git robomimic-mg
+# cd robomimic-mg
+# git checkout mimicgen
+# # NOTE: comment out deps in setup.py here, except for egl-probe
+# pip install -e .
+# # mimicgen
+# cd /workspace/conda
+# git clone git@github.com:RoboTurk-Platform/mimicgen.git
+# cd mimicgen
+# pip install -e .
+# # TODO: add mimicgen dataset into a volume and figure out how to attach
+# # TODO: try run on mimicgen dataset using interactive shell
+# # TODO: figure out output pipeline
+# # TODO: then try using workflow to directly run, and get output
