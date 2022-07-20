@@ -1,6 +1,8 @@
+import os
+import xml.etree.ElementTree as ET
 import numpy as np
 from robosuite.models.objects import MujocoXMLObject
-from robosuite.utils.mjcf_utils import xml_path_completion, array_to_string, find_elements
+from robosuite.utils.mjcf_utils import xml_path_completion, array_to_string, find_elements, string_to_array
 
 
 class BottleObject(MujocoXMLObject):
@@ -23,6 +25,56 @@ class CanObject(MujocoXMLObject):
         super().__init__(xml_path_completion("objects/can.xml"),
                          name=name, joints=[dict(type="free", damping="0.0005")],
                          obj_type="all", duplicate_collision_geoms=True)
+
+
+class ScaledCanObject(MujocoXMLObject):
+    """
+    Coke can object (used in PickPlace)
+    """
+    def __init__(self, name, scale=1.5):
+        # get scale in x, y, z
+        if isinstance(scale, float):
+            scale = [scale, scale, scale]
+        elif isinstance(scale, tuple) or isinstance(scale, list):
+            assert len(scale) == 3
+            scale = tuple(scale)
+        else:
+            raise Exception("got invalid scale: {}".format(scale))
+
+        # read default xml
+        xml_path = xml_path_completion("objects/can.xml")
+        folder = os.path.dirname(xml_path)
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+
+        # modify mesh scale
+        asset = root.find("asset")
+        meshes = asset.findall("mesh")
+        assert len(meshes) == 1
+        mesh = meshes[0]
+        mesh.set("scale", array_to_string(scale))
+
+        # modify sites for collision (assumes we can just scale up the locations - may or may not work)
+        for name in ["bottom_site", "top_site", "horizontal_radius_site"]:
+            site = root.find("worldbody/body/site[@name='{}']".format(name))
+            pos = string_to_array(site.get("pos"))
+            pos = scale * pos
+            site.set("pos", array_to_string(pos))
+
+        # write modified xml
+        xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
+        new_xml_path = os.path.join(folder, "tmp.xml")
+        f = open(new_xml_path, "w")
+        f.write(xml_str)
+        f.close()
+
+        # initialize object with new xml we wrote
+        super().__init__(new_xml_path,
+                         name=name, joints=[dict(type="free", damping="0.0005")],
+                         obj_type="all", duplicate_collision_geoms=True)
+
+        # clean up xml - we don't need it anymore
+        os.remove(new_xml_path)
 
 
 class LemonObject(MujocoXMLObject):

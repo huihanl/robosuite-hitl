@@ -1,6 +1,7 @@
 from robosuite.controllers import load_controller_config
 from robosuite.utils.input_utils import *
 
+import mimicgen
 
 if __name__ == "__main__":
 
