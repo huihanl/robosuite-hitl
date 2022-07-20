@@ -451,6 +451,31 @@ class PickPlace(SingleArmEnv):
             )
             index += 1
 
+    def _construct_visual_objects(self):
+        """
+        Function that can be overriden by subclasses to load different objects.
+        """
+        self.visual_objects = []
+        for vis_obj_cls, obj_name in zip(
+                (MilkVisualObject, BreadVisualObject, CerealVisualObject, CanVisualObject),
+                self.obj_names,
+        ):
+            vis_name = "Visual" + obj_name
+            vis_obj = vis_obj_cls(name=vis_name)
+            self.visual_objects.append(vis_obj)
+
+    def _construct_objects(self):
+        """
+        Function that can be overriden by subclasses to load different objects.
+        """
+        self.objects = []
+        for obj_cls, obj_name in zip(
+                (MilkObject, BreadObject, CerealObject, CanObject),
+                self.obj_names,
+        ):
+            obj = obj_cls(name=obj_name)
+            self.objects.append(obj)
+
     def _load_model(self):
         """
         Loads an xml model, puts it in self.model
@@ -474,22 +499,9 @@ class PickPlace(SingleArmEnv):
         # store some arena attributes
         self.bin_size = mujoco_arena.table_full_size
 
-        self.objects = []
-        self.visual_objects = []
-        for vis_obj_cls, obj_name in zip(
-                (MilkVisualObject, BreadVisualObject, CerealVisualObject, CanVisualObject),
-                self.obj_names,
-        ):
-            vis_name = "Visual" + obj_name
-            vis_obj = vis_obj_cls(name=vis_name)
-            self.visual_objects.append(vis_obj)
-
-        for obj_cls, obj_name in zip(
-                (MilkObject, BreadObject, CerealObject, CanObject),
-                self.obj_names,
-        ):
-            obj = obj_cls(name=obj_name)
-            self.objects.append(obj)
+        # make objects
+        self._construct_visual_objects()
+        self._construct_objects()
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
