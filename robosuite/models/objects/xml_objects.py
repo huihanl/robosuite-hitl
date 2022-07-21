@@ -1,4 +1,4 @@
-import os
+import os,pdb
 import xml.etree.ElementTree as ET
 import numpy as np
 from robosuite.models.objects import MujocoXMLObject
@@ -55,8 +55,8 @@ class ScaledCanObject(MujocoXMLObject):
         mesh.set("scale", array_to_string(scale))
 
         # modify sites for collision (assumes we can just scale up the locations - may or may not work)
-        for name in ["bottom_site", "top_site", "horizontal_radius_site"]:
-            site = root.find("worldbody/body/site[@name='{}']".format(name))
+        for n in ["bottom_site", "top_site", "horizontal_radius_site"]:
+            site = root.find("worldbody/body/site[@name='{}']".format(n))
             pos = string_to_array(site.get("pos"))
             pos = scale * pos
             site.set("pos", array_to_string(pos))
@@ -67,6 +67,7 @@ class ScaledCanObject(MujocoXMLObject):
         f = open(new_xml_path, "w")
         f.write(xml_str)
         f.close()
+        print(f"Write to {new_xml_path}")
 
         # initialize object with new xml we wrote
         super().__init__(new_xml_path,
