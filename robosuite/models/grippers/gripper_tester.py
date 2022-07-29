@@ -3,8 +3,8 @@ Defines GripperTester that is used to test the physical properties of various gr
 """
 import numpy as np
 import xml.etree.ElementTree as ET
-from mujoco_py import MjSim, MjViewer
 
+import robosuite.utils.macros as macros
 from robosuite.models.world import MujocoWorldBase
 from robosuite.models.arenas.table_arena import TableArena
 from robosuite.utils.mjcf_utils import (
@@ -12,6 +12,11 @@ from robosuite.utils.mjcf_utils import (
     new_joint,
     array_to_string)
 from robosuite.models.objects import BoxObject
+
+if macros.USE_DM_BINDING:
+    from robosuite.utils.binding_utils import MjSim
+else:
+    from mujoco_py import MjSim, MjViewer
 
 
 class GripperTester:
@@ -117,9 +122,13 @@ class GripperTester:
         """
         Starts simulation of the test world
         """
-        model = self.world.get_model(mode="mujoco_py")
+        if macros.USE_DM_BINDING:
+            model_xml = self.world.get_xml()
+            self.sim = MjSim.from_xml_string(model_xml)
+        else:
+            model = self.world.get_model(mode="mujoco_py")
+            self.sim = MjSim(model)
 
-        self.sim = MjSim(model)
         if self.render:
             self.viewer = MjViewer(self.sim)
         self.sim_state = self.sim.get_state()

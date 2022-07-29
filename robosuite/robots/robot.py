@@ -6,7 +6,11 @@ from robosuite.models.mounts import mount_factory
 from robosuite.utils.buffers import DeltaBuffer
 from robosuite.utils.observables import Observable, sensor
 
-from mujoco_py import MjSim
+import robosuite.utils.macros as macros
+if macros.USE_DM_BINDING:
+    from robosuite.utils.binding_utils import MjSim
+else:
+    from mujoco_py import MjSim
 
 from robosuite.models.robots import create_robot
 
