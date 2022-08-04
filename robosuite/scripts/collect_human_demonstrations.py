@@ -83,7 +83,7 @@ def collect_human_trajectory(env, device, arm, env_configuration):
     env.close()
 
 
-def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
+def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episodes=None, meta_data=None):
     """
     Gathers the demonstrations saved in @directory into a
     single hdf5 file.
@@ -106,12 +106,13 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
 
     Args:
         directory (str): Path to the directory containing raw demonstrations.
-        out_dir (str): Path to where to store the hdf5 file. 
+        out_dir (str): Path to where to store the hdf5 file.
         env_info (str): JSON-encoded string containing environment information,
             including controller and robot info
     """
 
     hdf5_path = os.path.join(out_dir, "demo.hdf5")
+    print("Saving hdf5 to", hdf5_path)
     f = h5py.File(hdf5_path, "w")
 
     # store some metadata in the attributes of one group
@@ -121,10 +122,15 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
     env_name = None  # will get populated at some point
 
     for ep_directory in os.listdir(directory):
+        # print("Processing {} ...".format(ep_directory))
+        if (excluded_episodes is not None) and (ep_directory in excluded_episodes):
+            # print("\tExcluding this episode!")
+            continue
 
         state_paths = os.path.join(directory, ep_directory, "state_*.npz")
         states = []
         actions = []
+        action_modes = []
 
         for state_file in sorted(glob(state_paths)):
             dic = np.load(state_file, allow_pickle=True)
@@ -133,7 +139,8 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             states.extend(dic["states"])
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
-                
+                action_modes.append(ai["action_modes"])
+
         if len(states) == 0:
             continue
 
@@ -155,6 +162,11 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         # write datasets for states and actions
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
+        ep_data_grp.create_dataset("action_modes", data=np.array(action_modes))
+
+    if num_eps == 0:
+        f.close()
+        return
 
     # write dataset attributes (metadata)
     now = datetime.datetime.now()
@@ -163,6 +175,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
     grp.attrs["repository_version"] = suite.__version__
     grp.attrs["env"] = env_name
     grp.attrs["env_info"] = env_info
+
+    if meta_data is not None:
+        for (k, v) in meta_data.items():
+            grp.attrs[k] = v
 
     f.close()
 

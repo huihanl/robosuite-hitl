@@ -298,7 +298,10 @@ class MujocoEnv(metaclass=EnvMeta):
 
         if self.has_offscreen_renderer:
             if self.sim._render_context_offscreen is None:
+                from mujoco_py import GlfwContext
+                GlfwContext(offscreen=True)
                 render_context = MjRenderContextOffscreen(self.sim, device_id=self.render_gpu_device_id)
+                self.sim.add_render_context(render_context)
                 if not macros.USE_DM_BINDING:
                     # TODO: we kept this line for consistency with old code with old binding, but should probably remove it
                     self.sim.add_render_context(render_context)
