@@ -1,8 +1,9 @@
 from collections import OrderedDict
 import numpy as np
+import xml.etree.ElementTree as ET
 
 import robosuite.utils.transform_utils as T
-from robosuite.utils.mjcf_utils import CustomMaterial
+from robosuite.utils.mjcf_utils import CustomMaterial, array_to_string
 from robosuite.utils.sim_utils import check_contact
 
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
@@ -118,6 +119,20 @@ class ToolHang(SingleArmEnv):
     Raises:
         AssertionError: [Invalid number of robots specified]
     """
+    CAMERA_CONFIGS = dict(
+        agentview=dict(
+            pos=[0.4837275266036987, 0.2505579098815722, 1.2639379055124524],
+            quat=[0.39713290333747864, 0.27807527780532837, 0.5016612410545349, 0.7164464592933655]
+        ),
+        sideview=dict(
+            pos=[0.4837275266036987, 0.2505579098815722, 1.2139379055124524],
+            quat=[0.39713290333747864, 0.27807527780532837, 0.5016612410545349, 0.7164464592933655]
+        ),
+        birdview=dict(
+            pos=[0.1045990028253385, 0.05549855331430535, 1.438645643967546],
+            quat=[0.6964787840843201, 0.03677058964967728, 0.14742861688137054, 0.7013058066368103]
+        ),
+    )
 
     def __init__(
         self,
@@ -146,7 +161,7 @@ class ToolHang(SingleArmEnv):
         camera_heights=256,
         camera_widths=256,
         camera_depths=False,
-    ):
+    ):                
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -233,18 +248,12 @@ class ToolHang(SingleArmEnv):
         mujoco_arena.set_origin([0, 0, 0])
 
         # Modify default agentview camera
-        mujoco_arena.set_camera(
-            camera_name="agentview",
-            pos=[0.4837275266036987, 0.2505579098815722, 1.2639379055124524],
-            quat=[0.39713290333747864, 0.27807527780532837, 0.5016612410545349, 0.7164464592933655]
-        )
-
-        # Add sideview
-        mujoco_arena.set_camera(
-            camera_name="sideview",
-            pos=[0.4837275266036987, 0.2505579098815722, 1.2139379055124524],
-            quat=[0.39713290333747864, 0.27807527780532837, 0.5016612410545349, 0.7164464592933655]
-        )
+        for (cam_name, cam_cfg) in ToolHang.CAMERA_CONFIGS.items():
+            mujoco_arena.set_camera(
+                camera_name=cam_name,
+                pos=cam_cfg["pos"],
+                quat=cam_cfg["quat"]
+            )
 
         # Create stand, frame, and tool
         self.stand_args = dict(
@@ -306,6 +315,34 @@ class ToolHang(SingleArmEnv):
             mujoco_robots=[robot.robot_model for robot in self.robots], 
             mujoco_objects=[self.stand, self.frame, self.tool],
         )
+
+    def postprocess_model_xml(self, xml_str):
+        """
+        This function postprocesses the model.xml collected from a MuJoCo demonstration
+        for retrospective model changes.
+
+        Args:
+            xml_str (str): Mujoco sim demonstration XML file as string
+
+        Returns:
+            str: Post-processed xml file as string
+        """
+        xml_str = super().postprocess_model_xml(xml_str)
+
+        tree = ET.fromstring(xml_str)
+        root = tree
+        worldbody = root.find("worldbody")
+        cameras = worldbody.findall("camera")
+        
+        for cam in cameras:
+            cam_name = cam.get("name")
+            cam_config = ToolHang.CAMERA_CONFIGS.get(cam_name, None)
+            if cam_config is None:
+                continue
+            cam.set("pos", array_to_string(cam_config["pos"]))
+            cam.set("quat", array_to_string(cam_config["quat"]))
+
+        return ET.tostring(root, encoding="utf8").decode("utf8")
 
     def _get_placement_initializer(self):
         """
