@@ -1,4 +1,7 @@
 import numpy as np
+import os
+import robosuite
+import xml.etree.ElementTree as ET
 
 from robosuite.environments.robot_env import RobotEnv
 from robosuite.models.grippers import GripperModel
@@ -299,3 +302,40 @@ class ManipulationEnv(RobotEnv):
         for robot in robots:
             assert issubclass(ROBOT_CLASS_MAPPING[robot], Manipulator),\
                 "Only manipulator robots supported for manipulation environment!"
+
+    def postprocess_model_xml(self, xml_str):
+        """
+        This function postprocesses the model.xml collected from a MuJoCo demonstration
+        for retrospective model changes.
+
+        Args:
+            xml_str (str): Mujoco sim demonstration XML file as string
+
+        Returns:
+            str: Post-processed xml file as string
+        """
+
+        path = os.path.split(robosuite.__file__)[0]
+        path_split = path.split("/")
+
+        # replace mesh and texture file paths
+        tree = ET.fromstring(xml_str)
+        root = tree
+        asset = root.find("asset")
+        meshes = asset.findall("mesh")
+        textures = asset.findall("texture")
+        all_elements = meshes + textures
+
+        for elem in all_elements:
+            old_path = elem.get("file")
+            if old_path is None:
+                continue
+            old_path_split = old_path.split("/")
+            ind = max(
+                loc for loc, val in enumerate(old_path_split) if val == "robosuite"
+            )  # last occurrence index
+            new_path_split = path_split + old_path_split[ind + 1 :]
+            new_path = "/".join(new_path_split)
+            elem.set("file", new_path)
+
+        return ET.tostring(root, encoding="utf8").decode("utf8")

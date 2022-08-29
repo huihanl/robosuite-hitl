@@ -435,6 +435,19 @@ class MujocoEnv(metaclass=EnvMeta):
         """
         raise NotImplementedError
 
+    def postprocess_model_xml(self, xml_str):
+        """
+        This function postprocesses the model.xml collected from a MuJoCo demonstration
+        for retrospective model changes.
+
+        Args:
+            xml_str (str): Mujoco sim demonstration XML file as string
+
+        Returns:
+            str: Post-processed xml file as string
+        """
+        raise NotImplementedError
+
     def render(self):
         """
         Renders to an on-screen window.
