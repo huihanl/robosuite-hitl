@@ -231,8 +231,8 @@ if __name__ == "__main__":
                 "OR leave blank for an example:\n")
 
     if len(inp) == 0:
-        if args.env != "Lift":
-            raise Exception("ERROR: env must be Lift to run default example.")
+        # if args.env != "Lift":
+        #     raise Exception("ERROR: env must be Lift to run default example.")
         print("\nUsing an example tag corresponding to the frontview camera.")
         print("This xml tag was copied from robosuite/models/assets/arenas/table_arena.xml")
         inp = '<camera mode="fixed" name="frontview" pos="1.6 0 1.45" quat="0.56 0.43 0.43 0.56"/>'
