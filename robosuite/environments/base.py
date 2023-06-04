@@ -276,6 +276,8 @@ class MujocoEnv(metaclass=EnvMeta):
 
         elif self.has_offscreen_renderer:
             if self.sim._render_context_offscreen is None:
+                from mujoco_py import GlfwContext
+                GlfwContext(offscreen=True)
                 render_context = MjRenderContextOffscreen(self.sim, device_id=self.render_gpu_device_id)
                 self.sim.add_render_context(render_context)
             self.sim._render_context_offscreen.vopt.geomgroup[0] = (1 if self.render_collision_mesh else 0)
