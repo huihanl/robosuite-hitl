@@ -392,7 +392,7 @@ class NutAssembly(SingleArmEnv):
         if self.placement_initializer is None:
             self.placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
 
-            square_y_range = self.reset_config.get('square_y_range', [0.11, 0.225])
+            square_y_range = self.reset_config.get('square_y_range', [0.00, 0.30])
             round_y_range = self.reset_config.get('round_y_range', [-0.225, -0.11])
             rotation = self.reset_config.get('rotation', None)
 
@@ -400,9 +400,9 @@ class NutAssembly(SingleArmEnv):
                 self.placement_initializer.append_sampler(
                     sampler=UniformRandomSampler(
                         name=f"{nut_name}Sampler",
-                        x_range=[-0.115, -0.11],
+                        x_range=[-0.07, -0.17],
                         y_range=default_y_range,
-                        rotation=rotation,
+                        rotation=[-np.pi / 2, np.pi / 2],
                         rotation_axis='z',
                         ensure_object_boundary_in_range=False,
                         ensure_valid_placement=True,
